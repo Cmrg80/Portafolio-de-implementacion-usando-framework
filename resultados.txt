@@ -1,0 +1,29 @@
+RESULTADOS RANDOM FOREST
+========================
+
+Registros totales: 569
+Datos de entrenamiento: 455
+Datos de prueba: 114
+
+Métricas:
+Accuracy:  0.9737
+Precision: 1.0000
+Recall:    0.9286
+F1-Score:  0.9630
+
+Matriz de confusión:
+[[72  0]
+ [ 3 39]]
+
+Variables más importantes:
+             feature  importance
+          area_worst    0.151412
+concave points_worst    0.126497
+        radius_worst    0.093475
+     perimeter_worst    0.083642
+ concave points_mean    0.081082
+      perimeter_mean    0.077126
+         radius_mean    0.061990
+      concavity_mean    0.050818
+           area_mean    0.045916
+     concavity_worst    0.030022
