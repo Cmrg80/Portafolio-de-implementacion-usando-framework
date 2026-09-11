@@ -14,10 +14,9 @@ from sklearn.metrics import (
     f1_score,
     confusion_matrix,
     classification_report,
-    ConfusionMatrixDisplay
+    ConfusionMatrixDisplay,
+    log_loss
 )
-
-
 # Cargar el dataset
 
 def seleccionar_dataset():
@@ -71,7 +70,8 @@ y = df["diagnosis"].map({
 
 # Split del dataset para entrenamiento y prueba 
 
-X_train, X_test, y_train, y_test = train_test_split(
+# 80% temporal, 20% prueba final
+X_temp, X_test, y_temp, y_test = train_test_split(
     X,
     y,
     test_size=0.20,
@@ -79,10 +79,27 @@ X_train, X_test, y_train, y_test = train_test_split(
     stratify=y
 )
 
+# Del 80% restante:
+# 75% -> entrenamiento
+# 25% -> validación
+#
+# Resultado final:
+# 60% entrenamiento
+# 20% validación
+# 20% prueba
+
+X_train, X_val, y_train, y_val = train_test_split(
+    X_temp,
+    y_temp,
+    test_size=0.25,
+    random_state=42,
+    stratify=y_temp
+)
+
 print("\nDivisión del dataset:")
 print(f"Datos de entrenamiento: {len(X_train)}")
+print(f"Datos de validación: {len(X_val)}")
 print(f"Datos de prueba: {len(X_test)}")
-
 
 # Creación de random forest
 
@@ -112,6 +129,193 @@ print("Entrenamiento terminado.")
 
 y_pred = model.predict(X_test)
 
+
+# Creación de carpeta de resultados
+
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+RESULTS_DIR = os.path.join(
+    BASE_DIR,
+    "results"
+)
+
+os.makedirs(RESULTS_DIR, exist_ok=True)
+
+# Training vs evaluation acurracy
+
+print("\nGenerando gráfica de entrenamiento y validación...")
+
+n_estimators_values = range(10, 201, 10)
+
+training_accuracy = []
+validation_accuracy = []
+
+for n in n_estimators_values:
+
+    rf = RandomForestClassifier(
+        n_estimators=n,
+        criterion="gini",
+        max_depth=None,
+        min_samples_split=2,
+        min_samples_leaf=1,
+        max_features="sqrt",
+        bootstrap=True,
+        random_state=42,
+        n_jobs=-1
+    )
+
+    rf.fit(X_train, y_train)
+
+    train_prediction = rf.predict(X_train)
+    validation_prediction = rf.predict(X_val)
+
+    train_acc = accuracy_score(
+        y_train,
+        train_prediction
+    )
+
+    validation_acc = accuracy_score(
+        y_val,
+        validation_prediction
+    )
+
+    training_accuracy.append(train_acc)
+    validation_accuracy.append(validation_acc)
+
+
+plt.figure(figsize=(10, 6))
+
+plt.plot(
+    n_estimators_values,
+    training_accuracy,
+    marker="o",
+    label="Training Accuracy"
+)
+
+plt.plot(
+    n_estimators_values,
+    validation_accuracy,
+    marker="o",
+    label="Validation Accuracy"
+)
+
+plt.xlabel("Número de árboles (n_estimators)")
+plt.ylabel("Accuracy")
+
+plt.title(
+    "Training vs Validation Accuracy"
+)
+
+plt.legend()
+plt.grid(True)
+
+plt.tight_layout()
+
+plt.savefig(
+    os.path.join(
+        RESULTS_DIR,
+        "training_validation_accuracy.png"
+    ),
+    dpi=900
+)
+
+plt.close()
+
+print(
+    "Gráfica guardada: "
+    "results/training_validation_accuracy.png"
+)
+
+# Training vs validation loss
+
+print("\nGenerando gráfica de loss...")
+
+training_loss = []
+validation_loss = []
+
+for n in n_estimators_values:
+
+    rf = RandomForestClassifier(
+        n_estimators=n,
+        criterion="gini",
+        max_depth=None,
+        min_samples_split=2,
+        min_samples_leaf=1,
+        max_features="sqrt",
+        bootstrap=True,
+        random_state=42,
+        n_jobs=-1
+    )
+
+    rf.fit(X_train, y_train)
+
+    train_probabilities = rf.predict_proba(
+        X_train
+    )
+
+    validation_probabilities = rf.predict_proba(
+        X_val
+    )
+
+    train_loss = log_loss(
+        y_train,
+        train_probabilities
+    )
+
+    validation_loss_value = log_loss(
+        y_val,
+        validation_probabilities
+    )
+
+    training_loss.append(train_loss)
+    validation_loss.append(
+        validation_loss_value
+    )
+
+
+plt.figure(figsize=(10, 6))
+
+plt.plot(
+    n_estimators_values,
+    training_loss,
+    marker="o",
+    label="Training Loss"
+)
+
+plt.plot(
+    n_estimators_values,
+    validation_loss,
+    marker="o",
+    label="Validation Loss"
+)
+
+plt.xlabel("Número de árboles (n_estimators)")
+plt.ylabel("Log Loss")
+
+plt.title(
+    "Training vs Validation Loss"
+)
+
+plt.legend()
+plt.grid(True)
+
+plt.tight_layout()
+
+plt.savefig(
+    os.path.join(
+        RESULTS_DIR,
+        "training_validation_loss.png"
+    ),
+    dpi=300
+)
+
+plt.close()
+
+print(
+    "Gráfica guardada: "
+    "results/training_validation_loss.png"
+)
 
 # Métricas
 
@@ -155,7 +359,7 @@ os.makedirs("results", exist_ok=True)
 
 plt.savefig(
     "results/matriz_confusion.png",
-    dpi=300
+    dpi=900
 )
 plt.show()
 
