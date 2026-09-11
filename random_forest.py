@@ -1,5 +1,9 @@
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
+import tkinter as tk
+
+from tkinter import filedialog
 
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
@@ -14,20 +18,44 @@ from sklearn.metrics import (
 )
 
 
-# ==========================================
-# 1. CARGAR DATASET
-# ==========================================
+# Cargar el dataset
 
-df = pd.read_csv("data/breast-cancer.csv")
+def seleccionar_dataset():
 
-print("Dataset cargado correctamente.")
+    root = tk.Tk()
+    root.withdraw()
+
+    archivo = filedialog.askopenfilename(
+        title="Selecciona el dataset",
+        filetypes=[
+            ("Archivos CSV", "*.csv"),
+            ("Todos los archivos", "*.*")
+        ]
+    )
+
+    root.destroy()
+
+    return archivo
+
+
+print("Selecciona el archivo CSV del dataset...")
+
+DATASET_PATH = seleccionar_dataset()
+
+if not DATASET_PATH:
+    print("No se seleccionó ningún archivo.")
+    exit()
+
+print(f"\nDataset seleccionado:")
+print(DATASET_PATH)
+
+df = pd.read_csv(DATASET_PATH)
+
+print("\nDataset cargado correctamente.")
 print(f"Número de registros: {len(df)}")
 print(f"Número de variables: {len(df.columns)}")
 
-
-# ==========================================
-# 2. PREPARAR LOS DATOS
-# ==========================================
+# Preparación de los datos
 
 # El ID no aporta información para la clasificación
 X = df.drop(columns=["id", "diagnosis"])
@@ -41,9 +69,7 @@ y = df["diagnosis"].map({
 })
 
 
-# ==========================================
-# 3. DIVISIÓN ENTRENAMIENTO / PRUEBA
-# ==========================================
+# Split del dataset para entrenamiento y prueba 
 
 X_train, X_test, y_train, y_test = train_test_split(
     X,
@@ -58,9 +84,7 @@ print(f"Datos de entrenamiento: {len(X_train)}")
 print(f"Datos de prueba: {len(X_test)}")
 
 
-# ==========================================
-# 4. CREAR RANDOM FOREST
-# ==========================================
+# Creación de random forest
 
 model = RandomForestClassifier(
     n_estimators=100,
@@ -75,9 +99,7 @@ model = RandomForestClassifier(
 )
 
 
-# ==========================================
-# 5. ENTRENAMIENTO
-# ==========================================
+# Entrenamiento
 
 print("\nEntrenando Random Forest...")
 
@@ -86,16 +108,12 @@ model.fit(X_train, y_train)
 print("Entrenamiento terminado.")
 
 
-# ==========================================
-# 6. PREDICCIONES
-# ==========================================
+# Predicciones
 
 y_pred = model.predict(X_test)
 
 
-# ==========================================
-# 7. MÉTRICAS
-# ==========================================
+# Métricas
 
 accuracy = accuracy_score(y_test, y_pred)
 precision = precision_score(y_test, y_pred)
@@ -121,9 +139,7 @@ print(classification_report(
 ))
 
 
-# ==========================================
-# 8. MATRIZ DE CONFUSIÓN
-# ==========================================
+# Matriz de confusión 
 
 disp = ConfusionMatrixDisplay(
     confusion_matrix=cm,
@@ -135,17 +151,16 @@ disp.plot()
 plt.title("Matriz de Confusión - Random Forest")
 plt.tight_layout()
 
+os.makedirs("results", exist_ok=True)
+
 plt.savefig(
     "results/matriz_confusion.png",
     dpi=300
 )
-
 plt.show()
 
 
-# ==========================================
-# 9. IMPORTANCIA DE VARIABLES
-# ==========================================
+# Importancia de las variables
 
 feature_importance = pd.DataFrame({
     "feature": X.columns,
@@ -162,9 +177,7 @@ print("\n========== VARIABLES MÁS IMPORTANTES ==========")
 print(feature_importance.head(10).to_string(index=False))
 
 
-# ==========================================
-# 10. GUARDAR RESULTADOS
-# ==========================================
+# Guardar resultados
 
 with open("results/resultados.txt", "w", encoding="utf-8") as file:
 
